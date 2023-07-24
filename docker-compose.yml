@@ -1,0 +1,88 @@
+version: "3.9"
+
+networks:
+  daemon:
+    name: daemon
+    attachable: true
+  default:
+
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: ./Dockerfile
+      target: ${BUILD_TARGET}
+    env_file:
+      - .env
+    restart: unless-stopped
+    environment:
+      PORT: ${API_PORT}
+      NODE_END: ${NODE_ENV}
+      RABBIT_HOST: ${RABBIT_HOST}
+      RABBIT_PASSWORD: ${RABBIT_PASSWORD}
+      RABBIT_USER: ${RABBIT_USER}
+      RABBIT_PORT: ${RABBIT_PORT}
+    ports:
+      - "${API_PORT}:4000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - default
+      - daemon
+    volumes:
+      - ./api/src:/home/node/app/src
+      - back-node-modules:/home/node/app/node_modules
+
+  rabbitmq:
+    image: rabbitmq:3.8-management-alpine
+    container_name: "rabbitmq"
+    env_file:
+      - .env
+    ports:
+      - "${RABBIT_PORT}:5672"
+      - "${RABBIT_WEB_PORT}:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBIT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBIT_PASSWORD}
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    volumes:
+      - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/
+      - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
+    networks:
+      - default
+      - daemon
+
+  daemon:
+    build:
+      context: ./daemon
+      dockerfile: ./Dockerfile
+      target: ${BUILD_TARGET}
+    env_file:
+      - .env
+    restart: unless-stopped
+    environment:
+      NODE_END: ${NODE_ENV}
+      RABBIT_HOST: ${RABBIT_HOST}
+      RABBIT_PASSWORD: ${RABBIT_PASSWORD}
+      RABBIT_USER: ${RABBIT_USER}
+      RABBIT_PORT: ${RABBIT_PORT}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      api:
+        condition: service_started
+    networks:
+      - default
+      - daemon
+    volumes:
+      - ./daemon/src:/home/node/app/src
+      - daemon-node-modules:/home/node/app/node_modules
+
+volumes:
+  back-node-modules:
+  daemon-node-modules:
