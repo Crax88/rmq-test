@@ -4,7 +4,7 @@ Test task with RabbitMQ and NodeJS
 
 ## Development start
 
-To start project follow tis steps:
+To start project follow this steps:
 
 1. install [Docker](https://www.docker.com/) and [Docker-compose](https://docs.docker.com/compose/)
 2. Clone the repository
