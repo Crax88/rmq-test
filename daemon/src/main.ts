@@ -16,6 +16,11 @@ const incomeQueue = "messagesProcess";
     heartbeat: 60,
   });
   const channel = await connection.createChannel();
+  await channel.assertExchange("messages", "topic", { durable: true });
+  await channel.assertQueue("messagesProcess", { durable: true });
+  await channel.assertQueue("messagesProcessed", { durable: true });
+  await channel.bindQueue("messagesProcess", "messages", "income_message");
+
   channel.prefetch(1);
   process.once("SIGINT", async () => {
     console.log("got sigint, closing connection");
